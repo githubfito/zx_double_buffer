@@ -1,11 +1,10 @@
 # zx_double_buffer
 
-Para gestionar el doble buffer y los bancos en el ZX Spectrum 128K,
-se utiliza principalmente el puerto 32765 ($7FFD).
-Este puerto es "el guardián" que decide qué banco se ve y qué banco está conectado
-en la ventana superior.
+Para gestionar el doble buffer y los bancos en el ZX Spectrum 128K, se utiliza principalmente el puerto 32765 ($7FFD).
+Este puerto es "el guardián" que decide qué banco se ve y qué banco está conectado en la ventana superior.
 
 Comandos OUT y cómo se estructuran los valores:
+
 1. El Puerto $7FFD (32765)
    Este puerto funciona enviando un byte donde cada bit controla una característica distinta:
      Bits 0-2: Seleccionan el banco de RAM (0 al 7) que aparecerá en el rango 49152-65535.
