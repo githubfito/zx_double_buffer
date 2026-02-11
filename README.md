@@ -1,5 +1,4 @@
 # zx_double_buffer
-<sub>
 
 Para gestionar el doble buffer y los bancos en el ZX Spectrum 128K, se utiliza principalmente el puerto 32765 ($7FFD).
 
@@ -50,8 +49,50 @@ Comandos OUT y cómo se estructuran los valores:
    No uses la memoria por encima de 49151 para tu programa si vas a ejecutar estos OUT o podrías sufrir un "crash" al desaparecer tu propio código de la vista del procesador.
    
 ---
-Gestión de Doble Buffer y Shadow Screen (ZX Spectrum 128K)Este documento detalla la configuración de memoria y los comandos necesarios para implementar un sistema de doble buffer utilizando la Shadow Screen del ZX Spectrum 128K en Boriel Basic.1. Los Bancos de PantallaEl hardware del ZX Spectrum 128K permite alternar entre dos bancos físicos para la salida de vídeo:BancoFunciónDirección de Memoria FijaBanco 5Pantalla Principal (Estándar 48K)16384 ($4000)Banco 7Pantalla Shadow (Extra 128K)49152 ($C000)2. El Puerto de Control $7FFD (32765)Para gestionar qué pantalla se muestra y en qué banco se escribe, se utiliza el puerto 32765. El bit más importante para el doble buffer es el Bit 3.Bit 3 = 0: El televisor muestra el Banco 5.Bit 3 = 1: El televisor muestra el Banco 7.Tabla de Conmutación (Doble Buffer Simétrico)Para evitar parpadeos, mientras el usuario ve una pantalla, el programa debe estar dibujando en la otra a través de la "ventana" de memoria superior (49152 - 65535).Estado del JuegoPantalla VisibleBanco para Dibujar (en $C000)Comando OUT 32765, VEscena ABanco 5 (Normal)Banco 7 (Shadow)OUT 32765, 23Escena BBanco 7 (Shadow)Banco 5 (Normal)OUT 32765, 293. Direccionamiento en Funciones de DibujoAl utilizar la ventana superior ($C000) para pintar, las direcciones base para tus funciones de ensamblador (fastChars, paint) deben cambiar según el tipo de datos:Tipo de DatosBase High Byte (Decimal)Dirección HexadecimalPíxeles192$C000Atributos216$D800Nota: Estas bases (192 para píxeles y 216 para atributos) funcionan tanto si el banco paginado en la ventana superior es el 5 como si es el 7.4. Reglas de Oro y LimitacionesUbicación del Código: El código ejecutable y las variables críticas NO deben residir por encima de 49151. Al cambiar de banco con OUT, el código en esa zona desaparecería, provocando un cuelgue del sistema.Sincronización: Utiliza siempre HALT antes de cambiar el banco visible para asegurar que el cambio ocurra durante el retrazado vertical y evitar el efecto de "rayado" (tearing).Comentarios: En Boriel Basic/ugBasic, los comentarios REM deben ir en líneas separadas.Variables: No utilices el símbolo $ al declarar strings ni uses k como nombre de
+# Gestión de Doble Buffer y Shadow Screen (ZX Spectrum 128K)
+
+Este repositorio contiene implementaciones de bajo nivel para la manipulación de gráficos en el ZX Spectrum 128K utilizando **Boriel Basic** (ZX Basic). El objetivo principal es lograr un movimiento fluido de sprites sin parpadeos (flicker) mediante el uso del **Shadow Screen** (Banco 7).
+
+## 1. Conceptos Fundamentales
+
+El hardware del ZX Spectrum 128K permite alternar entre dos bancos de memoria física para la salida de vídeo. Mientras una pantalla es visible para el usuario, el procesador puede dibujar en la otra de forma oculta.
+
+| Banco de RAM | Función | Dirección de Memoria Fija |
+| :--- | :--- | :--- |
+| **Banco 5** | Pantalla Principal (Estándar 48K) | `16384` ($4000) |
+| **Banco 7** | Pantalla Shadow (Extra 128K) | `49152` ($C000) |
+
+
+
+## 2. Control del Puerto `$7FFD` (32765)
+
+La gestión de las pantallas y la paginación de memoria se realiza mediante el puerto `32765`. El control se basa principalmente en el **Bit 3** (Selector de pantalla visible) y los **Bits 0-2** (Banco de RAM en la ventana superior).
+
+### Tabla de Conmutación para Doble Buffer
+Para un sistema simétrico, mapeamos el banco donde queremos dibujar en la ventana superior (`$C000 - $FFFF`):
+
+| Estado | Pantalla Visible | Banco de Dibujo (Mapeado en $C000) | Valor `OUT 32765, V` |
+| :--- | :--- | :--- | :--- |
+| **Escena A** | Banco 5 (Normal) | **Banco 7 (Shadow)** | `23` ($16 + 7) |
+| **Escena B** | Banco 7 (Shadow) | **Banco 5 (Normal)** | `29` ($24 + 5) |
+
+## 3. Direccionamiento de Funciones ASM
+
+Al utilizar la ventana superior (`$C000`) para las operaciones de dibujado, las direcciones base para las funciones de píxeles y atributos deben ser constantes, independientemente de si estamos en el Banco 5 o 7.
+
+| Capa de Pantalla | Base High Byte (Decimal) | Dirección Memoria |
+| :--- | :--- | :--- |
+| **Píxeles** | `192` | `$C000` |
+| **Atributos** | `216` | `$D800` |
+
+### Ejemplo de integración en `fastChars`:
+```asm
+; Cálculo de dirección de pantalla usando base dinámica
+LD A, (IX+7)    ; Coordenada Y
+AND 24
+ADD A, (IX+15)  ; Suma 192 (Píxeles en ventana $C000)
+LD H, A
 
 * Utilizar directiva --org o org para aprender a limitar tu código por debajo de la dirección 49152 y evitar colisiones con el banco 7.
 
-</sub>
+
